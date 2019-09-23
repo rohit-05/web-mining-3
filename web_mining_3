@@ -1,0 +1,71 @@
+import queue
+import re 
+from urllib.parse import urlparse 
+from urllib.parse import urljoin
+from bs4 import BeautifulSoup 
+import requests 
+from selenium import webdriver
+import os
+
+def is_absolute(url):
+    """Determine whether URL is absolute."""    
+    return bool(urlparse(url).netloc)
+
+
+# Webdriver
+chromedriver = "/users/rohitbhardwaj/downloads/chromedriver"
+options = webdriver.ChromeOptions()
+options.add_argument("headless")
+driver = webdriver.Chrome(executable_path=chromedriver, chrome_options=options)
+
+ur = "https://www.stevens.edu"
+link = []
+link.append(ur)
+domains = []
+q = queue.Queue()
+q.put(ur)
+for i in range(1000):
+    email_addresses = []
+    
+    url = q.get()
+    #print(url)
+    qq = re.compile(r"https?://()?")
+    aass = qq.sub('', url).strip().strip('/')
+    
+    driver.get(url)    
+    
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    
+    # Extract emails
+    email_addresses += re.findall("\S+@stevens.edu", soup.get_text())    
+    email_addresses = list(set(email_addresses))
+    
+    
+    # Make directory
+    first = "/users/rohitbhardwaj/desktop/root/"
+    email_txt = "/email.txt" 
+    path = first + aass
+    directory = first + aass + email_txt
+    
+    if not os.path.exists(path):
+        os.makedirs(path)
+    
+    # Write file
+    with open(directory, "w+") as f:
+        for e in email_addresses:
+            f.write(e + "\n")
+
+    
+    # find all the domains in the webpage
+    links = soup.find_all("a", href=True)
+    #print(links)
+    for a in links:
+        #print(a['href'])
+        aa = a.get('href')
+        if not is_absolute(aa):
+            u = urljoin(url, aa)
+            if "stevens.edu" in u:
+                if u not in link:
+                    q.put(u)
+                    link.append(u)
+    
